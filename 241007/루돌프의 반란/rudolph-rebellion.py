@@ -60,21 +60,18 @@ def pushSanta(santaIdx, dirIdx, pushType):
     elif pushType == 's':
         iter = d-1
 
-    for _ in range(iter):
-        nextR, nextC = nextR + dr[dirIdx], nextC + dc[dirIdx]
-        if nextR < 1 or nextC < 1 or nextR > n or nextC > n:
-            santaState[santaIdx] = dead
-            aliveNum -= 1
-            area[santaR-1][santaC-1] = 0
-            return
-        if area[nextR-1][nextC-1] > 0:
-            otherSantaIdx = area[nextR-1][nextC-1] - 1
-            pushSanta(otherSantaIdx, dirIdx, 'x')
-            # otherNextR, otherNextC = nextR + dr[dirIdx], nextC + dc[dirIdx]
-            # if otherNextR < 1 or otherNextC < 1 or otherNextR > n or otherNextC > n:
-            #     santaState[otherSantaIdx] = dead
-    area[nextR-1][nextC-1] = santaIdx + 1
+    nextR, nextC = nextR + iter*dr[dirIdx], nextC + iter*dc[dirIdx]
+    if nextR < 1 or nextC < 1 or nextR > n or nextC > n:
+        santaState[santaIdx] = dead
+        aliveNum -= 1
+        area[santaR-1][santaC-1] = 0
+        return
+    if area[nextR-1][nextC-1] > 0 and area[nextR-1][nextC-1] != santaIdx+1:
+        otherSantaIdx = area[nextR-1][nextC-1] - 1
+        pushSanta(otherSantaIdx, dirIdx, 'x')
+
     area[santaR-1][santaC-1] = 0
+    area[nextR-1][nextC-1] = santaIdx + 1 # 제자리 튕기면 순서 중요 초기화 먼저하고 할당
     santaList[santaIdx][1], santaList[santaIdx][2] = nextR, nextC
 
     if pushType != 'x':
@@ -125,6 +122,8 @@ def moveSantas():
                     minDist = dist
                     nextR, nextC = tempR, tempC
                     minDirIdx = dirIdx
+                if dist == 0:
+                    break
 
             if minDirIdx == -1:
                 continue
@@ -165,6 +164,8 @@ def setAlive():
 
 setArea()
 for idx in range(m):
+    # print(f'Step : {idx}')
+
     setWake()
     # print('루돌프 이동 전')
     # printArea()
