@@ -108,9 +108,7 @@ def rotateAll():
     for _ in range(rotateNum):
         rotate90(bestR, bestC)
 
-    # print(*area, sep="\n", end="\n\n")
     findRelics('remove')
-    # print(*area, sep="\n", end="\n\n")
     answers.append(answer)
     return 0
 
@@ -130,14 +128,9 @@ for idx in range(k):
 
     while 1:
         fillPieces()
-        # print(*area, sep="\n", end="\n\n")
         score = findRelics('remove')
-        # print(score)
-        # print(*area, sep="\n", end="\n\n")
         answers[idx] += score
         if score == 0:
             break
-
-    # print(*area, sep="\n", end="\n\n----------------------\n")
 
 print(*answers)
