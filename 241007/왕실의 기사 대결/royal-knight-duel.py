@@ -79,7 +79,7 @@ def getDamage(knightIdx):
         knightR, knightC, knightH, knightW, knightHP = knights[idx]
         if knightHP > 0 and knightIdx != idx:
             for r in range(knightH):
-                for c in range(knightC):
+                for c in range(knightW):
                     if boards[knightR+r][knightC+c] == trap:
                         trapCnt += 1
         if knightHP - trapCnt <= 0:
@@ -135,5 +135,7 @@ for idx in range(q):
     isPossible(knightIdx, dir)
     # print(*knightsBoards, sep="\n", end="\n\n---------\n\n")
     getDamage(knightIdx)
+
+    # print(damages)
 
 print(sum(damages))
