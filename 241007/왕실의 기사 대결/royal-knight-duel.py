@@ -3,139 +3,102 @@ input = sys.stdin.readline
 
 from collections import deque
 
-blank = 0; trap = 1; wall = 2
-# alive = 0; dead = 1
+# 전역 변수들을 정의합니다.
+MAX_N = 31
+MAX_L = 41
+dx = [-1, 0, 1, 0]
+dy = [0, 1, 0, -1]
 
-dr, dc = [-1, 0, 1, 0], [0, 1, 0, -1]
+info = [[0 for _ in range(MAX_L)] for _ in range(MAX_L)]
+bef_k = [0 for _ in range(MAX_N)]
+r = [0 for _ in range(MAX_N)]
+c = [0 for _ in range(MAX_N)]
+h = [0 for _ in range(MAX_N)]
+w = [0 for _ in range(MAX_N)]
+k = [0 for _ in range(MAX_N)]
+nr = [0 for _ in range(MAX_N)]
+nc = [0 for _ in range(MAX_N)]
+dmg = [0 for _ in range(MAX_N)]
+is_moved = [False for _ in range(MAX_N)]
 
-flag = 0
-answer = 0
 
-l, n, q = map(int, input().split())
-boards = [[wall for _ in range(l+2)] for _ in range(l+2)]
-visited = [0 for _ in range(n+1)]
-for idx in range(1, l+1):
-    boards[idx][1:l+1] = list(map(int, input().split()))
-knightsBoards = [[blank for _ in range(l+2)] for _ in range(l+2)]
-knights = [[0, 0, 0, 0, 0]] + [list(map(int, input().split())) for _ in range(n)] # r, c, w, h, k
-cmds = [list(map(int, input().split())) for _ in range(q)]
-damages = [0 for _ in range(n+1)]
+# 움직임을 시도해봅니다.
+def try_movement(idx, dir):
+    q = deque()
 
-def setKnights():
-    for idx in range(1, n+1):
-        knightR, knightC, knightH, knightW, _ = knights[idx]
-        for h in range(knightH):
-            for w in range(knightW):
-                knightsBoards[knightR+h][knightC+w] = idx
+    # 초기화 작업입니다.
+    for i in range(1, n + 1):
+        dmg[i] = 0
+        is_moved[i] = False
+        nr[i] = r[i]
+        nc[i] = c[i]
 
-def getPoint(knightIdx, dir):
-    knightR, knightC, knightH, knightW, knightHP = knights[knightIdx]
-    if dir == 0:
-        return [[knightR, knightC+c] for c in range(knightW)]
-    elif dir == 1:
-        return [[knightR+r, knightC+knightW-1] for r in range(knightH)]
-    elif dir == 2:
-        return [[knightR+knightH-1, knightC+c] for c in range(knightW)]
-    return [[knightR+r, knightC] for r in range(knightH)] # dir == 3
+    q.append(idx)
+    is_moved[idx] = True
 
-def moveKnight(knightIdx, dir):
-    # print(f'knightIdx : {knightIdx}, {dir}')
-    global visited, flag
+    while q:
+        x = q.popleft()
 
-    if knights[knightIdx][4] <= 0:
-        return True
+        nr[x] += dx[dir]
+        nc[x] += dy[dir]
 
-    points = getPoint(knightIdx, dir)
-    # print(points)
-
-    for point in points:
-        curR, curC = point
-        nextR, nextC = curR + dr[dir], curC + dc[dir]
-
-        if nextR < 1 or nextC < 1 or nextR >= l + 1 or nextC >= l + 1:
-            visited[knightIdx] = 0
-            flag = 1
+        # 경계를 벗어나는지 체크합니다.
+        if nr[x] < 1 or nc[x] < 1 or nr[x] + h[x] - 1 > l or nc[x] + w[x] - 1 > l:
             return False
-        if boards[nextR][nextC] == wall:
-            visited[knightIdx] = 0
-            flag = 1
-            return False
-        if knightsBoards[nextR][nextC] and visited[knightsBoards[nextR][nextC]] == 0:
-            visited[knightsBoards[nextR][nextC]] = 1
-            if moveKnight(knightsBoards[nextR][nextC], dir) == False:
-                visited[knightsBoards[nextR][nextC]] = 0
-                flag = 1
-                return False
+
+        # 대상 조각이 다른 조각이나 장애물과 충돌하는지 검사합니다.
+        for i in range(nr[x], nr[x] + h[x]):
+            for j in range(nc[x], nc[x] + w[x]):
+                if info[i][j] == 1:
+                    dmg[x] += 1
+                if info[i][j] == 2:
+                    return False
+
+        # 다른 조각과 충돌하는 경우, 해당 조각도 같이 이동합니다.
+        for i in range(1, n + 1):
+            if is_moved[i] or k[i] <= 0:
+                continue
+            # 기사 i의 세로 시작 좌표가 기사 x의 세로 범위 끝보다 더 아래에 있다면, 두 기사는 세로로 겹치지 않음
+            # 기사 x의 세로 시작 좌표가 기사 i의 세로 범위 끝보다 더 아래에 있다면, 두 기사는 세로로 겹치지 않음
+            if r[i] > nr[x] + h[x] - 1 or nr[x] > r[i] + h[i] - 1:
+                continue
+            # 기사 i의 가로 시작 좌표가 기사 x의 가로 범위 끝보다 더 오른쪽에 있다면, 두 기사는 가로로 겹치지 않음
+            # 기사 x의 가로 시작 좌표가 기사 i의 가로 범위 끝보다 더 오른쪽에 있다면, 두 기사는 가로로 겹치지 않음
+            if c[i] > nc[x] + w[x] - 1 or nc[x] > c[i] + w[i] - 1:
+                continue
+
+            is_moved[i] = True
+            q.append(i)
+
+    dmg[idx] = 0
     return True
 
-def getDamage(knightIdx):
-    global answer
 
-    for idx in range(1, n+1):
-        if not visited[idx]:
-            continue
-
-        trapCnt = 0
-        knightR, knightC, knightH, knightW, knightHP = knights[idx]
-        if knightHP > 0 and knightIdx != idx:
-            for r in range(knightH):
-                for c in range(knightW):
-                    if boards[knightR+r][knightC+c] == trap:
-                        trapCnt += 1
-        if knightHP - trapCnt <= 0:
-            knights[idx][4] = 0
-            damages[idx] = 0
-        else:
-            damages[idx] += trapCnt
-    # print(damages)
-
-
-def isPossible(knightIdx, dir):
-    global knights, knightsBoards, visited
-
-    if flag:
-        knightsBoards = [knightsBoards[i][:] for i in range(l + 2)]
+# 특정 조각을 지정된 방향으로 이동시키는 함수입니다.
+def move_piece(idx, move_dir):
+    if k[idx] <= 0:
         return
-    knightsBoards = [[blank for _ in range(l + 2)] for _ in range(l + 2)]
 
-    # print(f'flag : {flag}')
-    visited[knightIdx] = 1
-
-    for idx in range(1, n+1):
-        if visited[idx]:
-            curR, curC, knightH, knightW, _ = knights[idx]
-            nextR, nextC = curR + dr[dir], curC + dc[dir]
-            knights[idx][:2] = nextR, nextC
-
-            for h in range(knightH):
-                for w in range(knightW):
-                    knightsBoards[nextR+h][nextC+w] = idx
-        else:
-            curR, curC, knightH, knightW, _ = knights[idx]
-
-            for h in range(knightH):
-                for w in range(knightW):
-                    knightsBoards[curR + h][curC + w] = idx
+    # 이동이 가능한 경우, 실제 위치와 체력을 업데이트합니다.
+    if try_movement(idx, move_dir):
+        for i in range(1, n + 1):
+            r[i] = nr[i]
+            c[i] = nc[i]
+            k[i] -= dmg[i]
 
 
-def init():
-    global visited, flag
-    flag = 0
-    visited = [0 for _ in range(n + 1)]
+# 입력값을 받습니다.
+l, n, q = map(int, input().split())
+for i in range(1, l + 1):
+    info[i][1:] = map(int, input().split())
+for i in range(1, n + 1):
+    r[i], c[i], h[i], w[i], k[i] = map(int, input().split())
+    bef_k[i] = k[i]
 
-setKnights()
-for idx in range(q):
-    # print(f'step : {idx}')
-    init()
-    # print(*knightsBoards, sep="\n", end="\n\n")
-    knightIdx, dir = cmds[idx]
-    moveKnight(knightIdx, dir)
-    # print(f'visited : {visited}')
+for _ in range(q):
+    idx, d = map(int, input().split())
+    move_piece(idx, d)
 
-    isPossible(knightIdx, dir)
-    # print(*knightsBoards, sep="\n", end="\n\n---------\n\n")
-    getDamage(knightIdx)
-
-    # print(damages)
-
-print(sum(damages))
+# 결과를 계산하고 출력합니다.
+ans = sum([bef_k[i] - k[i] for i in range(1, n + 1) if k[i] > 0])
+print(ans)
