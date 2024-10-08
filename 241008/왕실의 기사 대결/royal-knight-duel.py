@@ -50,9 +50,9 @@ def tryMove(kIdx, dir):
         for i in range(1, n+1):
             if isMoved[i] or k[i] <= 0:
                 continue
-            if r[i] > nr[x] + h[x] - 1 or nr[x] > r[i] + h[i] -1:
+            if r[i] > nr[x] + h[x] - 1 or nr[x] > r[i] + h[i] - 1:
                 continue
-            if c[i] > nc[x] + w[x] - 1 or nc[x] > c[i] + w[i] -1:
+            if c[i] > nc[x] + w[x] - 1 or nc[x] > c[i] + w[i] - 1:
                 continue
 
             isMoved[i] = 1
@@ -83,5 +83,5 @@ for idx in range(q):
     kIdx, dir = cmds[idx]
     tryCommand(kIdx, dir)
 
-ans = sum([hp[i] - k[i] for _ in range(1, n+1) if k[i] > 0])
+ans = sum([hp[i] - k[i] for i in range(1, n+1) if k[i] > 0])
 print(ans)
