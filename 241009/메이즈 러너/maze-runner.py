@@ -1,126 +1,180 @@
-import sys
-input = sys.stdin.readline
+n, m, k = tuple(map(int, input().split()))
+# 모든 벽들의 상태를 기록해줍니다.
+board = [
+    [0] * (n + 1)
+    for _ in range(n + 1)
+]
 
-blank = 0; alive = 1; exited = 0
-N_MAX = 11; M_MAX = 11
+for i in range(1, n + 1):
+    board[i] = [0] + list(map(int, input().split()))
+
+# 회전의 구현을 편하게 하기 위해 2차원 배열을 하나 더 정의해줍니다.
+next_board = [
+    [0] * (n + 1)
+    for _ in range(n + 1)
+]
+
+# 참가자의 위치 정보를 기록해줍니다.
+traveler = [[-1, -1]] + [
+    list(map(int, input().split()))
+    for _ in range(m)
+]
+
+# 출구의 위치 정보를 기록해줍니다.
+exits = list(map(int, input().split()))
+
+# 정답(모든 참가자들의 이동 거리 합)을 기록해줍니다.
+ans = 0
+
+# 회전해야 하는 최소 정사각형을 찾아 기록해줍니다.
+sx, sy, square_size = 0, 0, 0
 
 dr, dc = [-1, 1, 0, 0], [0, 0, -1, 1]
 
-r = [0 for _ in range(M_MAX)]
-c = [0 for _ in range(M_MAX)]
-dist = [0 for _ in range(M_MAX)]
-state = [alive for _ in range(M_MAX)]
-
-n, m, k = map(int, input().split())
-maze = [[0 for _ in range(N_MAX)] for _ in range(N_MAX)]
-for i in range(1, n+1):
-    maze[i][1:] = map(int, input().split())
-for i in range(1, m+1):
-    r[i], c[i] = map(int, input().split())
-exit = list(map(int, input().split()))
-
-def getDistance(r1, c1, r2, c2):
+def get_distance(r1, c1, r2, c2):
     return abs(r1-r2) + abs(c1-c2)
 
-def movePlayers():
-    for i in range(1, m+1):
-        if state[i] == exited:
+# 모든 참가자를 이동시킵니다.
+def move_all_traveler():
+    global exits, ans
+
+    # m명의 모든 참가자들에 대해 이동을 진행합니다.
+    for i in range(1, m + 1):
+        # 이미 출구에 있는 경우 스킵합니다.
+        if traveler[i] == exits:
             continue
+
         dir = -1
-        minDist = getDistance(exit[0], exit[1], r[i], c[i])
+        minDist = get_distance(exits[0], exits[1], traveler[i][0], traveler[i][1])
         for j in range(4):
-            nr, nc = r[i] + dr[j], c[i] + dc[j]
+            nr, nc = traveler[i][0] + dr[j], traveler[i][1] + dc[j]
 
             if nr < 1 or nc < 1 or nr > n or nc > n:
                 continue
 
-            if maze[nr][nc]:
+            if board[nr][nc]:
                 continue
 
-            curDist = getDistance(exit[0], exit[1], nr, nc)
+            curDist = get_distance(exits[0], exits[1], nr, nc)
             if curDist < minDist:
                 minDist = curDist
                 dir = j
 
         if dir != - 1:
-            dist[i] += 1
-            r[i], c[i] = r[i] + dr[dir], c[i] + dc[dir]
-            if exit[0] == r[i] and exit[1] == c[i]:
-                state[i] = exited
+            ans += 1
+            traveler[i][0], traveler[i][1] = traveler[i][0] + dr[dir], traveler[i][1] + dc[dir]
 
-def getSmallSquare():
-    minSide = N_MAX
-    squares = {}
-    for i in range(1, m+1):
-        if state[i] == exited:
-            continue
-        height, width = abs(exit[0] - r[i]), abs(exit[1] - c[i])
-        side = max(height, width)
-        if side < minSide:
-            minSide = side
-            squares = {}
 
-            minR, minC = min(exit[0], r[i]), min(exit[1], c[i])
-            maxR, maxC = max(exit[0], r[i]), max(exit[1], c[i])
+# 한 명 이상의 참가자와 출구를 포함한 가장 작은 정사각형을 찾습니다.
+def find_minimum_square():
+    global exits, sx, sy, square_size
+    ex, ey = exits
 
-            for x in range(-side, side + 1):
-                for y in range(-side, side + 1):
-                    nr, nc = minR+x, minC+y
-                    if nr < 1 or nc < 1 or nr+side > n or nc+side > n:
-                        continue
-                    if not (nr <= r[i] <= nr+side and nr <= exit[0] <= nr+side):
-                        continue
-                    if not (nc <= c[i] <= nc+side and nc <= exit[1] <= nc+side):
-                        continue
+    # 가장 작은 정사각형부터 모든 정사각형을 만들어봅니다.
+    for sz in range(2, n + 1):
+        # 가장 좌상단 r 좌표가 작은 것부터 하나씩 만들어봅니다.
+        for x1 in range(1, n - sz + 2):
+            # 가장 좌상단 c 좌표가 작은 것부터 하나씩 만들어봅니다.
+            for y1 in range(1, n - sz + 2):
+                x2, y2 = x1 + sz - 1, y1 + sz - 1
 
-                    squareCoord = f'{nr},{nc}'
-                    squares[squareCoord] = side
-
-    squareR, squareC = N_MAX, N_MAX
-    for coord in squares:
-        curR, curC = map(int, coord.split(','))
-        if curR < squareR:
-            squareR = curR; squareC = curC
-        elif curR == squareR:
-            if curC < squareC:
-                squareC = curC
-
-    return squareR, squareC, minSide
-
-def rotateSquare(curR, curC, side):
-    global maze, exit
-    originalMaze = [maze[curR+i][curC:curC+side+1] for i in range(side+1)]
-    nr = r[:]
-    nc = c[:]
-    nextExit = exit[:]
-
-    for i in range(side+1):
-        for j in range(side+1):
-            if originalMaze[side - j][i]:
-                maze[curR+i][curC+j] = originalMaze[side - j][i] - 1
-            else:
-                maze[curR + i][curC + j] = 0
-
-            for k in range(1, m+1):
-                if state[k] == exited:
+                # 만약 출구가 해당 정사각형 안에 없다면 스킵합니다.
+                if not (x1 <= ex and ex <= x2 and y1 <= ey and ey <= y2):
                     continue
-                if side - j + curR == r[k] and i + curC == c[k]:
-                    nr[k], nc[k] = curR+i, curC+j
-            if side - j + curR == exit[0] and i + curC == exit[1]:
-                nextExit[0], nextExit[1] = curR + i, curC + j
 
+                # 한 명 이상의 참가자가 해당 정사각형 안에 있는지 판단합니다.
+                is_traveler_in = False
+                for l in range(1, m + 1):
+                    tx, ty = traveler[l]
+                    if x1 <= tx and tx <= x2 and y1 <= ty and ty <= y2:
+                        # 출구에 있는 참가자는 제외합니다.
+                        if not (tx == ex and ty == ey):
+                            is_traveler_in = True
+
+                # 만약 한 명 이상의 참가자가 해당 정사각형 안에 있다면
+                # sx, sy, square_size 정보를 갱신하고 종료합니다.
+                if is_traveler_in:
+                    sx = x1
+                    sy = y1
+                    square_size = sz
+
+                    return
+
+
+# 정사각형 내부의 벽을 회전시킵니다.
+def rotate_square():
+    # 우선 정사각형 안에 있는 벽들을 1 감소시킵니다.
+    for x in range(sx, sx + square_size):
+        for y in range(sy, sy + square_size):
+            if board[x][y]:
+                board[x][y] -= 1
+
+    # 정사각형을 시계방향으로 90' 회전합니다.
+    for x in range(sx, sx + square_size):
+        for y in range(sy, sy + square_size):
+            # Step 1. (sx, sy)를 (0, 0)으로 옮겨주는 변환을 진행합니다.
+            ox, oy = x - sx, y - sy
+            # Step 2. 변환된 상태에서는 회전 이후의 좌표가 (x, y) . (y, square_n - x - 1)가 됩니다.
+            rx, ry = oy, square_size - ox - 1
+            # Step 3. 다시 (sx, sy)를 더해줍니다.
+            next_board[rx + sx][ry + sy] = board[x][y]
+
+    # next_board 값을 현재 board에 옮겨줍니다.
+    for x in range(sx, sx + square_size):
+        for y in range(sy, sy + square_size):
+            board[x][y] = next_board[x][y]
+
+
+# 모든 참가자들 및 출구를 회전시킵니다.
+def rotate_traveler_and_exit():
+    global exits
+
+    # m명의 참가자들을 모두 확인합니다.
     for i in range(1, m + 1):
-        if state[k] == exited:
-            continue
-        r[i], c[i] = nr[i], nc[i]
-    exit = nextExit
+        tx, ty = traveler[i]
+        # 해당 참가자가 정사각형 안에 포함되어 있을 때에만 회전시킵니다.
+        if sx <= tx and tx < sx + square_size and sy <= ty and ty < sy + square_size:
+            # Step 1. (sx, sy)를 (0, 0)으로 옮겨주는 변환을 진행합니다.
+            ox, oy = tx - sx, ty - sy
+            # Step 2. 변환된 상태에서는 회전 이후의 좌표가 (x, y) . (y, square_n - x - 1)가 됩니다.
+            rx, ry = oy, square_size - ox - 1
+            # Step 3. 다시 (sx, sy)를 더해줍니다.
+            traveler[i] = [rx + sx, ry + sy]
 
-for step in range(k):
-    movePlayers()
-    if sum(state[1:m+1]) == exited:
+    # 출구에도 회전을 진행합니다.
+    ex, ey = exits
+    if sx <= ex and ex < sx + square_size and sy <= ey and ey < sy + square_size:
+        # Step 1. (sx, sy)를 (0, 0)으로 옮겨주는 변환을 진행합니다.
+        ox, oy = ex - sx, ey - sy
+        # Step 2. 변환된 상태에서는 회전 이후의 좌표가 (x, y) . (y, square_n - x - 1)가 됩니다.
+        rx, ry = oy, square_size - ox - 1
+        # Step 3. 다시 (sx, sy)를 더해줍니다.
+        exits = [rx + sx, ry + sy]
+
+
+for _ in range(k):
+    # 모든 참가자를 이동시킵니다.
+    move_all_traveler()
+
+    # 모든 사람이 출구로 탈출했는지 판단합니다.
+    is_all_escaped = True
+    for i in range(1, m + 1):
+        if traveler[i] != exits:
+            is_all_escaped = False
+
+    # 만약 모든 사람이 출구로 탈출했으면 바로 종료합니다.
+    if is_all_escaped:
         break
-    curR, curC, side = getSmallSquare()
-    rotateSquare(curR, curC, side)
 
-print(sum(dist))
-print(*exit)
+    # 한 명 이상의 참가자와 출구를 포함한 가장 작은 정사각형을 찾습니다.
+    find_minimum_square()
+    # 정사각형 내부의 벽을 회전시킵니다.
+    rotate_square()
+    # 모든 참가자들 및 출구를 회전시킵니다.
+    rotate_traveler_and_exit()
+    # print(ans)
+
+print(ans)
+
+ex, ey = exits
+print(ex, ey)
